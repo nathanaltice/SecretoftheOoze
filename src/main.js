@@ -1,9 +1,8 @@
 // Nathan Altice
-// Created: 7/6/20
-// Updated: 7/7/20
-// United States
-// StateMachine Class from mkelly.me/blog/phaser-finite-state-machine
-// Turn-Based FSM example
+// Ported from Phaser CE
+// Updated: 7/8/20
+// Secret of the Ooze
+// Elementary state machine with liquid/solid/gas states & transitions
 
 // Big Brain Debugging
 'use strict';
