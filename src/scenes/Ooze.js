@@ -18,7 +18,7 @@ class Ooze extends Phaser.Scene {
         // change bg color
         this.cameras.main.setBackgroundColor('#222');
 
-        // add solid ooze
+        // add liquid ooze
         this.ooze = this.add.sprite(game.config.width/2, game.config.height/2, 'liquid');
 
         // create ooze states (as a JSON object)
@@ -85,7 +85,7 @@ class Ooze extends Phaser.Scene {
         cursors = this.input.keyboard.createCursorKeys();
 
         // update instruction text
-        document.getElementById('info').innerHTML = '<strong>Ooze.js</strong>: Left Arrow (Cool) / Right Arrow (Cool) / Other Arrows (???)';
+        document.getElementById('info').innerHTML = '<strong>Ooze.js</strong>: Left Arrow (Cool) / Right Arrow (Heat) / Other Arrows (???)';
     }
 
     update() {
