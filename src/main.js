@@ -1,6 +1,6 @@
 // Nathan Altice
 // Ported from Phaser CE
-// Updated: 7/8/20
+// Updated: 4/11/21
 // Secret of the Ooze
 // Elementary state machine with liquid/solid/gas states & transitions
 
