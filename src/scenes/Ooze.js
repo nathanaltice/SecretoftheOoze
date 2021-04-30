@@ -68,7 +68,7 @@ class Ooze extends Phaser.Scene {
         ];
 
         // define transition time (ms)
-        this.transitionTime = 1500; 
+        this.transitionTime = 750; 
 
         // create state machine on ooze object, passing JSON states object & target object
         this.ooze.oozeFSM = new StateMachine(this.oozeStates, this.ooze);
@@ -78,8 +78,30 @@ class Ooze extends Phaser.Scene {
 
         // display info text
         this.statusText = this.add.text(game.config.width/2, game.config.height/6, `State: ${this.ooze.oozeFSM.getState().name}`).setOrigin(0.5);
-
         this.transitionText = this.add.text(game.config.width/2, game.config.height/6*5, `Transition: stable`).setOrigin(0.5);
+        
+        // throbber objects will obscure the asset swap during transitions
+        this.throbber1 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/4,game.config.width/6, 0xAAFF88);
+        this.throbber2 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/6,game.config.width/4, 0x88FFAA);
+        this.throbber1.alpha = 0;
+        this.throbber2.alpha = 0;
+        
+        this.tweens.add({
+            targets: [this.throbber1],
+            scale: {from: 1.1, to: 0.9},
+            duration: 500,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+            repeat: -1,
+        });
+        this.tweens.add({
+            targets: [this.throbber2],
+            scale: {from: 1.1, to: 0.9},
+            duration: 432,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+            repeat: -1,
+        });
 
         // create input keys
         cursors = this.input.keyboard.createCursorKeys();
@@ -157,6 +179,14 @@ class Ooze extends Phaser.Scene {
         // set a timer while we transition
         this.transitioning = true;
         this.transitionText.text = `Transition: ${phase}...`;
+        this.tweens.add({
+            targets: [this.throbber1, this.throbber2],
+            alpha: {from: 0, to: 1},
+            duration: this.transitionTime,
+            ease: 'Sine.easeInOut',
+            yoyo: true
+        })
+
         // .delayedCall(delay, callback, args, scope)
         this.time.delayedCall(this.transitionTime, () => {
             this.transitioning = false;
