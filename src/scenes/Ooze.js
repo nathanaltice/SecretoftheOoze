@@ -9,7 +9,7 @@ class Ooze extends Phaser.Scene {
         this.load.image('solid', 'solid.png');
         this.load.image('liquid', 'liquid.png');
         this.load.image('gas', 'gas.png');
-        this.load.image('dino', 'dino.png');
+        this.load.image('yoshi', 'dino.png');
         this.load.image('egg', 'yegg.png');
         this.load.image('shregg', 'shregg.png');
     }
@@ -68,7 +68,7 @@ class Ooze extends Phaser.Scene {
         ];
 
         // define transition time (ms)
-        this.transitionTime = 1500; 
+        this.transitionTime = 750; 
 
         // create state machine on ooze object, passing JSON states object & target object
         this.ooze.oozeFSM = new StateMachine(this.oozeStates, this.ooze);
@@ -78,90 +78,84 @@ class Ooze extends Phaser.Scene {
 
         // display info text
         this.statusText = this.add.text(game.config.width/2, game.config.height/6, `State: ${this.ooze.oozeFSM.getState().name}`).setOrigin(0.5);
+        this.transitionText = this.add.text(game.config.width/2, game.config.height/6*5, ``).setOrigin(0.5);
+        this.syncDisplayInfo();
+        
+        // throbber objects will obscure the asset swap during transitions
+        this.throbber1 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/4,game.config.width/6, 0xAAFF88);
+        this.throbber2 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/6,game.config.width/4, 0x88FFAA);
+        this.throbber1.alpha = 0;
+        this.throbber2.alpha = 0;
+        
+        // pulse slowly
+        this.tweens.add({
+            targets: [this.throbber1],
+            scale: {from: 1.1, to: 0.9},
+            duration: 500,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+            repeat: -1,
+        });
 
-        this.transitionText = this.add.text(game.config.width/2, game.config.height/6*5, `Transition: stable`).setOrigin(0.5);
+        // pulse slightly slowlier
+        this.tweens.add({
+            targets: [this.throbber2],
+            scale: {from: 1.1, to: 0.9},
+            duration: 432,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+            repeat: -1,
+        });
 
-        // create input keys
-        cursors = this.input.keyboard.createCursorKeys();
-
-        // update instruction text
-        document.getElementById('info').innerHTML = '<strong>Ooze.js</strong>: Left Arrow (Cool) / Right Arrow (Heat) / Other Arrows (???)';
+        // ask for keydown events as they happen
+        this.input.keyboard.on('keydown', this.keydown, this);
     }
 
-    update() {
-        // get current state
-        this.oozeCurrentState = this.ooze.oozeFSM.getState();
+    keydown(event) {
 
-        switch(this.oozeCurrentState.name) {
-            // ***********************************************************
-			case 'solid':
-                if(Phaser.Input.Keyboard.JustDown(cursors.up) && !this.transitioning) {
-					this.statePhase('nurture', 'egg');
-				}
-				if(Phaser.Input.Keyboard.JustDown(cursors.right) && !this.transitioning) {
-					this.statePhase('melt', 'liquid');	
-				}
-			    break;
-			// ***********************************************************
-			case 'liquid':
-				if(Phaser.Input.Keyboard.JustDown(cursors.left) && !this.transitioning) {
-					this.statePhase('freeze', 'solid');
-				}
-				if(Phaser.Input.Keyboard.JustDown(cursors.right) && !this.transitioning) {
-					this.statePhase('vaporize', 'gas');
-				}
-			    break;
-			// ***********************************************************
-			case 'gas':
-				if(Phaser.Input.Keyboard.JustDown(cursors.left) && !this.transitioning) {
-					this.statePhase('condense', 'liquid');
-				}
-			    break;
-            // ***********************************************************
-            case 'egg':
-				if(Phaser.Input.Keyboard.JustDown(cursors.up) && !this.transitioning) {
-					this.statePhase('hatch', 'dino');
-                }
-                if(Phaser.Input.Keyboard.JustDown(cursors.down) && !this.transitioning) {
-					this.statePhase('abandon', 'solid');
-				}
-			    break;
-            // ***********************************************************
-            case 'yoshi':
-				if(Phaser.Input.Keyboard.JustDown(cursors.up) && !this.transitioning) {
-					this.statePhase('ascend', 'shregg');
-                }
-                if(Phaser.Input.Keyboard.JustDown(cursors.down) && !this.transitioning) {
-					this.statePhase('defy god', 'egg');
-				}
-			    break;
-            // ***********************************************************
-            case 'shregg':
-                if(Phaser.Input.Keyboard.JustDown(cursors.down) && !this.transitioning) {
-					this.statePhase('nuke', 'liquid');
-				}
-			    break;
-			// ***********************************************************
-			default:
-                console.warn('Unknown state');
-                break;
-            // ***********************************************************
+        // ignore non-numeric keys
+        if(isNaN(event.key)) {
+            return;
         }
 
-        // update status text
-        this.statusText.text = `State: ${this.oozeCurrentState.name}`;
-        if(!this.transitioning) this.transitionText.text = `Transition: stable`;
-    }
+        // ignore keydown during transitions
+        if(this.transitioning) {
+            return;
+        }
 
-    statePhase(phase, texture) {
+        // which event are they trying to enact?
+        let index = Number.parseInt(event.key) - 1; // start at 1
+        let availableEvents = Object.keys(this.ooze.oozeFSM.currentState.events);
+        
+        // we only have a few of them
+        if(index >= availableEvents.length) {
+            return;
+        }
+        let selectedEvent = availableEvents[index];
+        
         // set a timer while we transition
         this.transitioning = true;
-        this.transitionText.text = `Transition: ${phase}...`;
-        // .delayedCall(delay, callback, args, scope)
+        this.transitionText.text = `Enacting: ${selectedEvent}...`;
         this.time.delayedCall(this.transitionTime, () => {
             this.transitioning = false;
-            this.ooze.setTexture(texture);
-            this.ooze.oozeFSM.consumeEvent(phase);
-        }, null, this);
+            this.ooze.oozeFSM.consumeEvent(selectedEvent);
+            this.syncDisplayInfo();
+        });
+
+        // wooze them in the meantime
+        this.tweens.add({
+            targets: [this.throbber1, this.throbber2],
+            alpha: {from: 0, to: 1},
+            duration: this.transitionTime,
+            ease: 'Sine.easeInOut',
+            yoyo: true
+        })
+    }
+
+    syncDisplayInfo() {
+        this.ooze.setTexture(this.ooze.oozeFSM.currentState.name);
+        let options = Object.keys(this.ooze.oozeFSM.currentState.events).map((k,i) => `(${i+1}) ${k}`);
+        this.transitionText.text = `Actions: ${options.join(', ')}`;
+        this.statusText.text = `State: ${this.ooze.oozeFSM.currentState.name}`;
     }
 }
