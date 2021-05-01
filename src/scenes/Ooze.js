@@ -155,7 +155,7 @@ class Ooze extends Phaser.Scene {
     syncDisplayInfo() {
         this.ooze.setTexture(this.ooze.oozeFSM.currentState.name);
         let options = Object.keys(this.ooze.oozeFSM.currentState.events).map((k,i) => `(${i+1}) ${k}`);
-        this.transitionText.text = `Actions: ${options.join(', ')}`;
+        this.transitionText.text = `Actions: ${options.join(' ')}`;
         this.statusText.text = `State: ${this.ooze.oozeFSM.currentState.name}`;
     }
 }

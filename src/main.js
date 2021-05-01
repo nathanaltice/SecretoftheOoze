@@ -1,4 +1,4 @@
-// Nathan Altice
+// Nathan Altice & Adam Smith
 // Ported from Phaser CE
 // Updated: 4/11/21
 // Secret of the Ooze
