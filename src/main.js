@@ -1,6 +1,6 @@
 // Nathan Altice & Adam Smith
 // Ported from Phaser CE
-// Updated: 4/11/21
+// Updated: 4/25/23
 // Secret of the Ooze
 // Elementary state machine with liquid/solid/gas states & transitions
 
