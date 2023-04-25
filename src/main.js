@@ -15,8 +15,6 @@ const config = {
     scene: [ Ooze ]
 };
 
-// define game
 const game = new Phaser.Game(config);
 
-// globals
-let cursors;
+let { width, height } = game.config;    // shortcut: destructuring assignment 👍

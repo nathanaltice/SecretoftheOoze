@@ -18,16 +18,37 @@ class Ooze extends Phaser.Scene {
         // change bg color
         this.cameras.main.setBackgroundColor('#222');
 
-        // add liquid ooze
-        this.ooze = this.add.sprite(game.config.width/2, game.config.height/2, 'liquid');
+        // add our mutating sprite object (ooze) to the scene
+        this.ooze = this.add.sprite(width/2, height/2, 'liquid');
 
-        // create ooze states (as a JSON object)
-        // solid | liquid | gas & accompanying transitions
+        // define all of the ooze's states (as a JSON object) to feed to state machine
         this.oozeStates = [
+			{
+                'name': 'liquid',
+                'initial': 	true,           // our starting state
+				'events': {                 // `events` define what actions are possible...
+					'freeze': 'solid',      // ...and which states those actions transition to
+					'vaporize': 'gas' 
+				}
+			},
             {
-                'name': 'shregg',
+				'name': 'solid',
+				'events': {
+                    'melt': 'liquid',
+                    'nurture': 'egg'
+				}
+			},
+			{
+				'name': 'gas',
+				'events': {
+					'condense': 'liquid'
+				}
+            },
+            {
+                'name': 'egg',
                 'events': {
-                    'nuke': 'liquid'
+                    'hatch': 'yoshi',
+                    'abandon': 'solid'
                 }
             },
             {
@@ -38,124 +59,83 @@ class Ooze extends Phaser.Scene {
                 }
             },
             {
-                'name': 'egg',
+                'name': 'shregg',
                 'events': {
-                    'hatch': 'yoshi',
-                    'abandon': 'solid'
+                    'nuke': 'liquid'
                 }
             },
-            {
-				'name': 'solid',
-				'events': {
-                    'melt': 'liquid',
-                    'nurture': 'egg'
-				}
-			},
-			{
-                'name': 'liquid',
-                'initial': 	true,
-				'events': {
-					'freeze': 	'solid',
-					'vaporize': 'gas' 
-				}
-			},
-			{
-				'name': 'gas',
-				'events': {
-					'condense': 'liquid'
-				}
-            }
         ];
-
-        // define transition time (ms)
-        this.transitionTime = 750; 
 
         // create state machine on ooze object, passing JSON states object & target object
         this.ooze.oozeFSM = new StateMachine(this.oozeStates, this.ooze);
 
-        // initialize our transitioning flag
-        this.transitioning = false;
+        // define transition variables
+        this.transitionTime = 750;      // how long the transition takes (in ms)
+        this.transitioning = false;     // initialize transition flag
 
-        // display info text
-        this.statusText = this.add.text(game.config.width/2, game.config.height/6, `State: ${this.ooze.oozeFSM.getState().name}`).setOrigin(0.5);
-        this.transitionText = this.add.text(game.config.width/2, game.config.height/6*5, ``).setOrigin(0.5);
-        this.syncDisplayInfo();
+        // define and display info text
+        this.statusText = this.add.text(width/2, height/6, `State: ${this.ooze.oozeFSM.getState().name}`).setOrigin(0.5);
+        this.transitionText = this.add.text(width/2, height/6*5, ``).setOrigin(0.5);
+        this.updateDisplayInfo();
         
-        // throbber objects will obscure the asset swap during transitions
-        this.throbber1 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/4,game.config.width/6, 0xAAFF88);
-        this.throbber2 = this.add.ellipse(game.config.width/2, game.config.height/2, game.config.width/6,game.config.width/4, 0x88FFAA);
-        this.throbber1.alpha = 0;
-        this.throbber2.alpha = 0;
-        
-        // pulse slowly
-        this.tweens.add({
-            targets: [this.throbber1],
-            scale: {from: 1.1, to: 0.9},
-            duration: 500,
-            yoyo: true,
-            ease: 'Sine.easeInOut',
-            repeat: -1,
-        });
+        // define 'pulsing' ellipse shape to obscure the asset swap during transitions
+        this.ellipse01 = this.add.ellipse(width/2, height/2, width/4, width/6, 0xAAFF88).setAlpha(0);
+        this.ellipse02 = this.add.ellipse(width/2, height/2, width/6, width/4, 0x88FFAA).setAlpha(0);
 
-        // pulse slightly slowlier
-        this.tweens.add({
-            targets: [this.throbber2],
-            scale: {from: 1.1, to: 0.9},
-            duration: 432,
-            yoyo: true,
-            ease: 'Sine.easeInOut',
-            repeat: -1,
-        });
-
-        // ask for keydown events as they happen
-        this.input.keyboard.on('keydown', this.keydown, this);
+        // capture keyboard input and pass to event handler
+        this.input.keyboard.on('keydown', this.keyEventHandler, this);
     }
 
-    keydown(event) {
-
+    keyEventHandler(event) {
         // ignore non-numeric keys
-        if(isNaN(event.key)) {
-            return;
-        }
+        if(isNaN(event.key)) { return; }
 
         // ignore keydown during transitions
-        if(this.transitioning) {
-            return;
-        }
+        if(this.transitioning) { return; }
 
-        // which event are they trying to enact?
-        let index = Number.parseInt(event.key) - 1; // start at 1
-        let availableEvents = Object.keys(this.ooze.oozeFSM.currentState.events);
+        // convert key string to index and check against available events
+        let eventIndex = Number.parseInt(event.key) - 1;
+        let availableEvents = Object.keys(this.ooze.oozeFSM.getCurrentStateEvents());
+        // kick us out if no event matches the key entered
+        if (eventIndex >= availableEvents.length) { return; }
+        let selectedEvent = availableEvents[eventIndex];
         
-        // we only have a few of them
-        if(index >= availableEvents.length) {
-            return;
-        }
-        let selectedEvent = availableEvents[index];
-        
-        // set a timer while we transition
+        // execute state transition
         this.transitioning = true;
-        this.transitionText.text = `Enacting: ${selectedEvent}...`;
-        this.time.delayedCall(this.transitionTime, () => {
+        this.transitionText.text = `Enacting: ${ selectedEvent }...`;
+        this.time.delayedCall(this.transitionTime, () => {  // create transition timer
             this.transitioning = false;
-            this.ooze.oozeFSM.consumeEvent(selectedEvent);
-            this.syncDisplayInfo();
+            this.ooze.oozeFSM.consumeEvent(selectedEvent);  // make the state change
+            this.updateDisplayInfo();
         });
 
-        // wooze them in the meantime
+        // play ellipse pulse animation
         this.tweens.add({
-            targets: [this.throbber1, this.throbber2],
-            alpha: {from: 0, to: 1},
+            targets: [this.ellipse01, this.ellipse02],
+            alpha: {
+                from: 0, 
+                to: 1
+            },
+            scale: {
+                from: 1.1, 
+                to: 0.9
+            },
             duration: this.transitionTime,
             ease: 'Sine.easeInOut',
             yoyo: true
         })
     }
 
-    syncDisplayInfo() {
-        this.ooze.setTexture(this.ooze.oozeFSM.currentState.name);
-        let options = Object.keys(this.ooze.oozeFSM.currentState.events).map((k,i) => `(${i+1}) ${k}`);
-        this.transitionText.text = `Actions: ${options.join(' ')}`;
+    updateDisplayInfo() {
+        // update sprite texture
+        let currentState = this.ooze.oozeFSM.getState();
+        this.ooze.setTexture(currentState.name);
+        // use array.map to create an array of text options to print to screen
+        let availableActions = Object.keys(this.ooze.oozeFSM.getCurrentStateEvents()).map(
+            (currentValue, index) => `(${ index+1 }) ${ currentValue }`
+        );
+        // update text
         this.statusText.text = `State: ${this.ooze.oozeFSM.currentState.name}`;
+        this.transitionText.text = `Actions: ${availableActions.join(' ')}`;
     }
 }
